@@ -134,6 +134,9 @@ class Magiccards(models.Model):
     foil = models.IntegerField()
     foilprice = models.IntegerField(db_column='foilPrice')  # Field name made lowercase.
 
+    def __str__(self):
+        return self.cardname
+
     class Meta:
         managed = False
         db_table = 'magicCards'
