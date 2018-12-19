@@ -159,3 +159,21 @@ class Usercards(models.Model):
     class Meta:
         managed = False
         db_table = 'userCards'
+
+######################################################
+##                 Site Models
+######################################################
+
+colourChoices = (
+    ('Green', 'GREEN'),
+    ('Blue', 'BLUE'),
+    ('Red', 'RED'),
+    ('White', 'WHITE'),
+    ('Black', 'BLACK')
+)
+
+class ColourSortingFields(models.Model):
+    colour = models.CharField(max_length=5, choices=colourChoices, default='Green')
+
+    def __str__(self):
+        return self.colour
