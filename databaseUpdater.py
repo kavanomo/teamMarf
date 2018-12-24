@@ -1,13 +1,13 @@
 # Robbie Lowles
 # This script is designed to query an online API of M:TG cards and update a MySQL database with relevant info
 
-import sys
 import json
 import mysql.connector
 import datetime
 import requests
 
 secrets = json.load(open('secrets.json', encoding="utf8"))
+output = requests.get('https://api.cardmarket.com/ws/v2.0/priceguide')
 
 teamMarfDB = mysql.connector.connect(
     host=secrets['host'],
@@ -17,11 +17,33 @@ teamMarfDB = mysql.connector.connect(
     db=secrets['db']
 )
 
+# Every 2 weeks, run this curl command and update access_token
+# curl --include --request POST --header "applicationt_type=client_credentials&client_id=85688862-7348-41C7-AE6A-C5F970B6A6A6&client_secret=F29D0FAC-8ED2-4C84-9346-4301D4656DA3" 'https://api.tcgplayer.com/token'
+
+tcgApiSecrets = {
+    "publicKey": secrets['publicKey'],
+    "privateKey": secrets['privateKey'],
+    "applicationId": secrets['applicationId'],
+    "token": secrets["accessToken"]
+}
+
 colourKey = {'U': 'blue',
              'G': 'green',
              'R': 'red',
              'W': 'white',
              'B': 'black'}
+
+tcgApiEndpoints = {
+    "pricing": "http://api.tcgplayer.com/v1.19.0/pricing/product/",
+    "auth": "http://api.tcgplayer.com/v1.19.0/app/authorize/",
+    "catalog": "http://api.tcgplayer.com/v1.19.0/catalog/products/"
+}
+
+def authTcgApi():
+    url = tcgApiEndpoints['auth'] + tcgApiSecrets["token"]
+    response = requests.request("POST", url)
+    print(response.text)
+
 
 def readAllCards():
     jsonData = json.load(open('scryfall-default-cards.json', encoding="utf8"))
@@ -45,6 +67,7 @@ def readAllCards():
         for colour in element['color_identity']:
             card[colourKey[colour]] = 1
 
+        # Need specific order for the tuple
         tupleCard = (
             card["cardName"],
             card["foil"],
@@ -70,6 +93,15 @@ def callApiSets():
         allSets.append(setTuple)
     return allSets
 
+
+def getPricingData():
+    jsonData = json.load(open('scryfall-default-cards.json', encoding="utf8"))
+    allCards = []
+    currentTime = datetime.datetime.now()
+    headers = {"Authorization": "bearer " + tcgApiSecrets['token']}
+    url = tcgApiEndpoints["catalog"]
+    response = requests.request("GET", url, headers=headers)
+    print(response.text)
 
 if __name__ == "__main__":
     processOptions = ['populate cards', 'populate sets', 'update']
@@ -99,5 +131,4 @@ if __name__ == "__main__":
     # Update prices of cards
     if processType == processOptions[2]:
         # TODO: Redo this with some sort of query builder as opposed to raw sql
-        query = "SELECT * FROM magicCards where lastUpdated <= CURDATE()"
-        mycursor.execute(query)
+        getPricingData()
