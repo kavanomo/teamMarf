@@ -4,7 +4,11 @@
 import json
 import mysql.connector
 import datetime
+import dateutil.parser
+import pytz
 import requests
+
+utc = pytz.UTC
 
 secrets = json.load(open('secrets.json', encoding="utf8"))
 output = requests.get('https://api.cardmarket.com/ws/v2.0/priceguide')
@@ -17,14 +21,12 @@ teamMarfDB = mysql.connector.connect(
     db=secrets['db']
 )
 
-# Every 2 weeks, run this curl command and update access_token
-# curl --include --request POST --header "applicationt_type=client_credentials&client_id=85688862-7348-41C7-AE6A-C5F970B6A6A6&client_secret=F29D0FAC-8ED2-4C84-9346-4301D4656DA3" 'https://api.tcgplayer.com/token'
-
 tcgApiSecrets = {
     "publicKey": secrets['publicKey'],
     "privateKey": secrets['privateKey'],
     "applicationId": secrets['applicationId'],
-    "token": secrets["accessToken"]
+    "token": secrets["accessToken"],
+    "expires": secrets[".expires"]
 }
 
 colourKey = {'U': 'blue',
@@ -39,6 +41,25 @@ tcgApiEndpoints = {
     "catalog": "http://api.tcgplayer.com/v1.19.0/catalog/products/"
 }
 
+def getNewAccessToken():
+    """
+    If the access token is expired (it has a 2 week lifespan) we will need to update it. This function grabs the
+    relevant authorization info from secrets and makes a call to TCGplayer's API. It'll now update the secrets file and
+    the secrets object for the rest of the script
+    :return:
+    """
+    headers = {'application': 'x-www-form-urlencoded'}
+    data = 'grant_type=client_credentials&client_id='+tcgApiSecrets["publicKey"]+'&client_secret='+tcgApiSecrets["privateKey"]
+    response = requests.post('https://api.tcgplayer.com/token', headers=headers, data=data).json()
+
+    secrets['accessToken'] = response['access_token']
+    secrets['expires'] = response['.expires']
+
+    with open('secrets.json', 'w') as newSecrets:
+        json.dump(secrets, newSecrets)
+    tcgApiSecrets['token'] = response['access_token']
+
+
 def authTcgApi():
     url = tcgApiEndpoints['auth'] + tcgApiSecrets["token"]
     response = requests.request("POST", url)
@@ -46,6 +67,11 @@ def authTcgApi():
 
 
 def readAllCards():
+    """
+    Open the bulk json file containing all MTG cards. Compile a list of important attributes in tuples for each card
+    and return that list of card tuples.
+    :return:
+    """
     jsonData = json.load(open('scryfall-default-cards.json', encoding="utf8"))
     allCards = []
     currentTime = datetime.datetime.now()
@@ -86,6 +112,11 @@ def readAllCards():
 
 
 def callApiSets():
+    """
+    Use the Scryfall API to compile a list of all MTG sets and their icon
+    Put these in a tuple so we can then populate the database
+    :return:
+    """
     setsApiResponse = json.loads((requests.get('https://api.scryfall.com/sets').content).decode('utf8'))['data']
     allSets = []
     for element in setsApiResponse:
@@ -103,10 +134,15 @@ def getPricingData():
     response = requests.request("GET", url, headers=headers)
     print(response.text)
 
+
 if __name__ == "__main__":
     processOptions = ['populate cards', 'populate sets', 'update']
     processType = processOptions[2]  # sys.argv[1] if sys.argv[1] else processOptions[0]
     mycursor = teamMarfDB.cursor()
+
+    tokenExpiryDate = dateutil.parser.parse(tcgApiSecrets['expires'])
+    if datetime.datetime.now(utc) > tokenExpiryDate:
+        getNewAccessToken()
 
     # Read in a list of all cards
     if processType == processOptions[0]:
