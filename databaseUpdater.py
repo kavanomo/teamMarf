@@ -113,8 +113,6 @@ def readAllCards():
     return allCards
 
 
-
-
 def callApiSets():
     """
     Use the Scryfall API to compile a list of all MTG sets and their icon
@@ -131,30 +129,32 @@ def callApiSets():
 
 def getPricingData():
 
-    currentTime = datetime.datetime.now()
+    currentTime = datetime.datetime.now().date()
     setsQuery = "SELECT setName FROM sets"
     mycursor.execute(setsQuery)
     setsOutput = mycursor.fetchall()
     headers = {"Authorization": "bearer " + tcgApiSecrets['token']}
     url = tcgApiEndpoints["catalog"]
     for set in setsOutput:
-        cardsQuery = "SELECT cardIDNumber, tcgIdNumber FROM magicCards WHERE setName = \"%s\"" % (set[0])
+        cardsQuery = "SELECT cardIDNumber, tcgIdNumber FROM magicCards WHERE setName = \"Battle for Zendikar\"" # \"%s\"" % (set[0])
         mycursor.execute(cardsQuery)
         cardSetList = mycursor.fetchall()
 
         cardUrlList = ','.join([str(i[1]) for i in cardSetList])
         pricingUrl = tcgApiEndpoints['pricing']+cardUrlList
 
+        # Note: max url length is 2000 characters. Long queries will need to be split up 
         pricingData = requests.request('GET', pricingUrl, headers=headers).json()['results']
         cardPrices = collections.defaultdict(dict)
         for price in pricingData:
             cardPrices[str(price['productId'])][price['subTypeName']] = price['marketPrice']
+            cardPrices[str(price['productId'])]['productId'] = price['productId']
 
-        columns = 'cardPriceUSD = %(Normal)s, foilPrice = %(Foil)s, lastUpdated = ' + str(currentTime)
-        updatePriceQuery = "UPDATE magicCards SET" + columns + " WHERE tcgIdNumber = %(productId)s"
-        mycursor.executemany(updatePriceQuery, cardPrices)
-
+        columns = 'cardPriceUSD = %(Normal)s, foilPrice = %(Foil)s, lastUpdated = \"' + str(currentTime) + '\"'
+        updatePriceQuery = "UPDATE magicCards SET " + columns + " WHERE tcgIdNumber = %(productId)s;"
+        mycursor.executemany(updatePriceQuery, cardPrices.values())
         teamMarfDB.commit()
+        print('Updated pricing for set: ' + set[0])
 
 
     #response = requests.request("GET", url, headers=headers)
