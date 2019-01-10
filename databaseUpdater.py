@@ -7,6 +7,7 @@ import datetime
 import dateutil.parser
 import pytz
 import requests
+import collections
 
 utc = pytz.UTC
 
@@ -40,6 +41,7 @@ tcgApiEndpoints = {
     "auth": "http://api.tcgplayer.com/v1.19.0/app/authorize/",
     "catalog": "http://api.tcgplayer.com/v1.19.0/catalog/products/"
 }
+
 
 def getNewAccessToken():
     """
@@ -111,6 +113,8 @@ def readAllCards():
     return allCards
 
 
+
+
 def callApiSets():
     """
     Use the Scryfall API to compile a list of all MTG sets and their icon
@@ -126,13 +130,35 @@ def callApiSets():
 
 
 def getPricingData():
-    jsonData = json.load(open('scryfall-default-cards.json', encoding="utf8"))
-    allCards = []
+
     currentTime = datetime.datetime.now()
+    setsQuery = "SELECT setName FROM sets"
+    mycursor.execute(setsQuery)
+    setsOutput = mycursor.fetchall()
     headers = {"Authorization": "bearer " + tcgApiSecrets['token']}
     url = tcgApiEndpoints["catalog"]
-    response = requests.request("GET", url, headers=headers)
-    print(response.text)
+    for set in setsOutput:
+        cardsQuery = "SELECT cardIDNumber, tcgIdNumber FROM magicCards WHERE setName = \"%s\"" % (set[0])
+        mycursor.execute(cardsQuery)
+        cardSetList = mycursor.fetchall()
+
+        cardUrlList = ','.join([str(i[1]) for i in cardSetList])
+        pricingUrl = tcgApiEndpoints['pricing']+cardUrlList
+
+        pricingData = requests.request('GET', pricingUrl, headers=headers).json()['results']
+        cardPrices = collections.defaultdict(dict)
+        for price in pricingData:
+            cardPrices[str(price['productId'])][price['subTypeName']] = price['marketPrice']
+
+        columns = 'cardPriceUSD = %(Normal)s, foilPrice = %(Foil)s, lastUpdated = ' + str(currentTime)
+        updatePriceQuery = "UPDATE magicCards SET" + columns + " WHERE tcgIdNumber = %(productId)s"
+        mycursor.executemany(updatePriceQuery, cardPrices)
+
+        teamMarfDB.commit()
+
+
+    #response = requests.request("GET", url, headers=headers)
+    #print(response.text)
 
 
 if __name__ == "__main__":
