@@ -127,24 +127,54 @@ def callApiSets():
     return allSets
 
 
+def splitLongQueries(longUrl, maxLength):
+    """
+    TCG Trader api has a max url length of 2000 characters. If we are querying a large number of cards individually,
+    the url length can get quite long. This function will recursivelly break a long url into chunks less than maxLength.
+    It is assumed that we want to split on a ','
+    :param longUrl: A string whose length is greater than maxLength
+    :param maxLength: Integer which is 2000 - the relevant url from tcgApiEndpoints
+    :return: urlList: a list of urls, each of whcih are smaller than maxLength
+    """
+    urlList = []
+    firstSlice = longUrl[:maxLength].rfind(',')
+    urlList = [longUrl[:firstSlice], longUrl[firstSlice+1:]]
+    if len(urlList[1]) > maxLength:
+        recurList = splitLongQueries(urlList[1], maxLength)
+        del urlList[-1]
+        urlList.extend(recurList)
+
+    return urlList
+
+
 def getPricingData():
+    """
+    Update the pricing data for all cards. Update cards in batches defined by the sets
+    :return:
+    """
 
     currentTime = datetime.datetime.now().date()
     setsQuery = "SELECT setName FROM sets"
     mycursor.execute(setsQuery)
     setsOutput = mycursor.fetchall()
     headers = {"Authorization": "bearer " + tcgApiSecrets['token']}
-    url = tcgApiEndpoints["catalog"]
+
     for set in setsOutput:
-        cardsQuery = "SELECT cardIDNumber, tcgIdNumber FROM magicCards WHERE setName = \"Battle for Zendikar\"" # \"%s\"" % (set[0])
+        cardsQuery = "SELECT tcgIdNumber FROM magicCards WHERE setName = \"%s\"" % (set[0])
         mycursor.execute(cardsQuery)
         cardSetList = mycursor.fetchall()
 
-        cardUrlList = ','.join([str(i[1]) for i in cardSetList])
-        pricingUrl = tcgApiEndpoints['pricing']+cardUrlList
+        maxLength = 2000 - len(tcgApiEndpoints['pricing'])
+        cardUrlList = ','.join([str(i[0]) for i in cardSetList])
+        if len(cardUrlList) > maxLength:
+            cardUrlList = splitLongQueries(cardUrlList,maxLength)
+            pricingData = []
+            for url in cardUrlList:
+                pricingData.extend(requests.request('GET', tcgApiEndpoints['pricing'] + url, headers=headers).json()['results'])
 
-        # Note: max url length is 2000 characters. Long queries will need to be split up 
-        pricingData = requests.request('GET', pricingUrl, headers=headers).json()['results']
+        else:
+            pricingData = requests.request('GET', tcgApiEndpoints['pricing'] + cardUrlList, headers=headers).json()['results']
+
         cardPrices = collections.defaultdict(dict)
         for price in pricingData:
             cardPrices[str(price['productId'])][price['subTypeName']] = price['marketPrice']
@@ -192,5 +222,4 @@ if __name__ == "__main__":
 
     # Update prices of cards
     if processType == processOptions[2]:
-        # TODO: Redo this with some sort of query builder as opposed to raw sql
         getPricingData()
