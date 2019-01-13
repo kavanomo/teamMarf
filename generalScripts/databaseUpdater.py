@@ -11,7 +11,7 @@ import collections
 
 utc = pytz.UTC
 
-secrets = json.load(open('secrets.json', encoding="utf8"))
+secrets = json.load(open('../secrets.json', encoding="utf8"))
 output = requests.get('https://api.cardmarket.com/ws/v2.0/priceguide')
 
 teamMarfDB = mysql.connector.connect(
@@ -120,10 +120,7 @@ def callApiSets():
     :return:
     """
     setsApiResponse = json.loads((requests.get('https://api.scryfall.com/sets').content).decode('utf8'))['data']
-    allSets = []
-    for element in setsApiResponse:
-        setTuple = (element['name'], element['icon_svg_uri'])
-        allSets.append(setTuple)
+    allSets = [(i["name"], i["icon_svg_uri"]) for i in setsApiResponse]
     return allSets
 
 
