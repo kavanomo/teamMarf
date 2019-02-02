@@ -1,0 +1,6 @@
+secrets.json
+scryfall-default-cards.json
+lib64
+share/
+lib/
+.idea/
