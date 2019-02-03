@@ -9,7 +9,7 @@
 #define PICKUP 0
 #define VACUUM 1
 #define ROTATE 2
-#define INIT 3
+#define INITIALIZE 3
 
 // COMPONENT DEFS
 // D1 - on/off, D2 - direction
@@ -22,24 +22,36 @@
 #define SOLENOID 6
 #define TOWERLIMIT 7
 
+#define THERMISTOR A2
+#define TOWERPD A1
+#define VACUUMPD A0
+
+// photodiode thresholds
+#define TOWERPDTHRESH 3
+#define VACUUMPDTHRESH 3
+
+// num of steps required to make a turn
+#define STEPS 5
+
 // STRUCTS
 struct command {
   byte action_bit;
   byte num_turns;
   byte direc;
-}
+};
 
 // GLOBAL DEFS
 byte msg;
-bool new_msg = false;
-bool sol_on = false;
+bool new_msg;
+bool sol_on;
+bool done;
 
 void setup() {
   // i2c CONNECTION
   Serial.begin(9600);
   Wire.begin(SLAVE_ADDRESS);
-  Wire.onReceive(receiveData);
-  //Wire.onRequest(sendData);
+  Wire.onReceive(receiveCmd);
+  Wire.onRequest(sendStatus);
 
   // COMPONENT SETUP
   pinMode(BUCKETD1, OUTPUT);
@@ -51,16 +63,26 @@ void setup() {
   pinMode(SOLENOID, OUTPUT);
   pinMode(TOWERLIMIT, INPUT);
 
+  // LIMIT SWITCH INTERRUPT
+  attachInterrupt(digitalPinToInterrupt(TOWERLIMIT), towerISR, RISING);
 }
 
-void init() {
+void initialize() {
   digitalWrite(VACUUMD1, 1);
+  sol_on = false;
+  new_msg = false;
 }
 
-void deinit() {
+void deinitialize() {
   digitalWrite(VACUUMD1, 0);
   digitalWrite(SOLENOID, 0);
-  sol_on = false;
+}
+
+void towerISR()
+{
+  digitalWrite(TOWERD1, 0);
+  digitalWrite(TOWERD1, 0);
+  digitalWrite(TOWERD1, 0);
 }
 
 command parseMessage(byte msg) {
@@ -76,13 +98,94 @@ void loop() {
   if (new_msg)
   {
     new_msg = false;
-    parsed_msg = parseMessage(msg);
+    done = false;
+    command parsed_msg = parseMessage(msg);
 
-    
+    switch (parsed_msg.action_bit)
+    { 
+      // init
+      case 0:
+      {
+        initialize();
+        // move the tower up if needed
+        int val;
+        val = analogRead(TOWERPD);
+        while (val < TOWERPDTHRESH)
+        {
+          digitalWrite(TOWERD1, 1);
+          val = analogRead(TOWERPD);
+        }
+          break;
+      }
+      // vacuuming  
+      case 1:
+      {
+        sol_on = !sol_on;
+        digitalWrite(SOLENOID, sol_on);
+        // move down by one so we don't interfere when the vacuum goes back
+        if (sol_on == false)
+        {
+          //TODO: Figure out which way is up and which is down, and also how much a step is
+          digitalWrite(TOWERD2,0);
+          digitalWrite(TOWERD1, 1);
+        }
+        // if vacuuming, bring up the scan tower a little until it gets picked up
+        else
+        {
+          int val1, val2;
+          val1 = analogRead(VACUUMPD);
+          val2 = analogRead(TOWERPD);
+          //TODO: Find the values that go in here
+          while ((val1 > VACUUMPDTHRESH) && (val2 < TOWERPDTHRESH))
+          {
+            digitalWrite(TOWERD1, 1);
+            val1 = analogRead(VACUUMPD);
+            val2 = analogRead(TOWERPD);
+          }  
+        }
+        break;
+      }
+      // rotate bucket tree  
+      case 2:
+      {
+        //TODO: Figure these directions out
+        // 1 - CW, 0 - CCW
+        if (parsed_msg.direc == 0)
+        {
+          digitalWrite(BUCKETD2, 1);
+        }
+        else
+        {
+          digitalWrite(BUCKETD2, 0);
+        }
+        int numSteps = (parsed_msg.num_turns * STEPS);
+        for (int j = 0; j < numSteps; j++)
+        {
+          digitalWrite(BUCKETD1, 1);
+        }
+        break;
+      }
+      // deinit 
+      case 3:
+      {
+        deinitialize();
+        break;
+      }
+      default:
+      {
+        break;
+      }
+    }
+    done = true;
    }
 }
 
-void receiveData(int num_bytes) {
+void receiveCmd(int num_bytes) {
   msg = Wire.read();
   new_msg = true;
+}
+
+// returns whether or not Uno is completed its actions
+void sendStatus() {
+  Wire.write(done);
 }
