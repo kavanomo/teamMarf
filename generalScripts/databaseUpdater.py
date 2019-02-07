@@ -1,6 +1,7 @@
 # Robbie Lowles
 # This script is designed to query an online API of M:TG cards and update a MySQL database with relevant info
 
+from random import randint, shuffle
 import json
 import mysql.connector
 import datetime
@@ -12,7 +13,6 @@ import collections
 utc = pytz.UTC
 
 secrets = json.load(open('../secrets.json', encoding="utf8"))
-output = requests.get('https://api.cardmarket.com/ws/v2.0/priceguide')
 
 teamMarfDB = mysql.connector.connect(
     host=secrets['host'],
@@ -188,10 +188,44 @@ def getPricingData():
     #print(response.text)
 
 
+def createPlaceholderSorts(numSorts):
+    for sort in range(numSorts):
+        currentTime = datetime.datetime.now()
+        sortOptions = ['col', 'cat', 'val']
+        numCats = randint(1, 5)
+        sortChoice = sortOptions[randint(0, len(sortOptions)-1)]
+        sortJSON = {'categories': {}}
+
+        if sortChoice == sortOptions[0]:
+            # We are doing colour sorting
+            colourOptions = list(colourKey.values())
+            shuffle(colourOptions)
+            for cat in range(numCats):
+                sortJSON['categories']['cat'+str(cat)] = colourOptions.pop()
+
+        if sortChoice == sortOptions[1]:
+            # We are doing cataloging
+            sortJSON['categories'] = 'catalogue'
+
+        if sortChoice == sortOptions[2]:
+            lowBoundPrice = 0
+            for cat in range(numCats):
+                highBoundPrice = lowBoundPrice + randint(5, 10)
+                price = {'val1': lowBoundPrice, 'val2': highBoundPrice}
+                sortJSON['categories']['cat'+str(cat)] = price
+                lowBoundPrice = highBoundPrice
+
+        sortObject = (currentTime, sortChoice, numCats, json.dumps(sortJSON))
+        query = "INSERT INTO sortCommands (timestamp, sortType, numCat, categories) VALUES (%s, %s, %s, %s)"
+        mycursor.execute(query, sortObject)
+        teamMarfDB.commit()
+
 if __name__ == "__main__":
     processOptions = ['populate cards', 'populate sets', 'update']
     processType = processOptions[2]  # sys.argv[1] if sys.argv[1] else processOptions[0]
     mycursor = teamMarfDB.cursor()
+
+    createPlaceholderSorts(5)
 
     tokenExpiryDate = dateutil.parser.parse(tcgApiSecrets['expires'])
     if datetime.datetime.now(utc) > tokenExpiryDate:
