@@ -9,6 +9,8 @@ import dateutil.parser
 import pytz
 import requests
 import collections
+import sys
+import time
 
 utc = pytz.UTC
 
@@ -188,12 +190,13 @@ def getPricingData():
     #print(response.text)
 
 
-def createPlaceholderSorts(numSorts):
+def createPlaceholderSorts(numSorts=5):
+
     for sort in range(numSorts):
         currentTime = datetime.datetime.now()
         sortOptions = ['col', 'cat', 'val']
         numCats = randint(1, 5)
-        sortChoice = sortOptions[randint(0, len(sortOptions)-1)]
+        sortChoice = sys.argv[3] or sortOptions[randint(0, len(sortOptions)-1)]
         sortJSON = {'categories': {}}
 
         if sortChoice == sortOptions[0]:
@@ -205,12 +208,13 @@ def createPlaceholderSorts(numSorts):
 
         if sortChoice == sortOptions[1]:
             # We are doing cataloging
+            numCats = 1
             sortJSON['categories'] = 'catalogue'
 
         if sortChoice == sortOptions[2]:
             lowBoundPrice = 0
             for cat in range(numCats):
-                highBoundPrice = lowBoundPrice + randint(5, 10)
+                highBoundPrice = lowBoundPrice + randint(3, 20)
                 price = {'val1': lowBoundPrice, 'val2': highBoundPrice}
                 sortJSON['categories']['cat'+str(cat)] = price
                 lowBoundPrice = highBoundPrice
@@ -219,13 +223,13 @@ def createPlaceholderSorts(numSorts):
         query = "INSERT INTO sortCommands (timestamp, sortType, numCat, categories) VALUES (%s, %s, %s, %s)"
         mycursor.execute(query, sortObject)
         teamMarfDB.commit()
+        time.sleep(.5)
 
 if __name__ == "__main__":
-    processOptions = ['populate cards', 'populate sets', 'update']
-    processType = processOptions[2]  # sys.argv[1] if sys.argv[1] else processOptions[0]
+    args = sys.argv
+    processOptions = ['populate-cards', 'populate-sets', 'update', 'create-sorts']
+    processType = sys.argv[1] or processOptions[4]
     mycursor = teamMarfDB.cursor()
-
-    createPlaceholderSorts(5)
 
     tokenExpiryDate = dateutil.parser.parse(tcgApiSecrets['expires'])
     if datetime.datetime.now(utc) > tokenExpiryDate:
@@ -254,3 +258,6 @@ if __name__ == "__main__":
     # Update prices of cards
     if processType == processOptions[2]:
         getPricingData()
+
+    if processType == processOptions[3]:
+        createPlaceholderSorts(int(sys.argv[2]))
