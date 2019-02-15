@@ -39,7 +39,7 @@ def constructSimilarSets(imgList):
         imPath = os.path.join(path, image[0])
         currentImage = cv2.imread(imPath)
         setName = image[0][:-4]
-        setGroup = {setName: [imPath]}
+        setGroup = {'name': setName, 'filePath': imPath, 'equivalents': []}
 
         simSetIndeces = []
 
@@ -49,10 +49,10 @@ def constructSimilarSets(imgList):
 
             nextPath, nextImage = imgList[j]
             nextImPath = os.path.join(nextPath, nextImage[0])
-            nextImage = cv2.imread(nextImPath)
+            nextImageObj = cv2.imread(nextImPath)
 
-            if imgEquivalence(currentImage, nextImage):
-                setGroup[setName].append(nextImPath)
+            if imgEquivalence(currentImage, nextImageObj):
+                setGroup['equivalents'].append(nextImage[0][:-4])
                 simSetIndeces.append(j)
 
         for index in sorted(simSetIndeces, reverse=True):
