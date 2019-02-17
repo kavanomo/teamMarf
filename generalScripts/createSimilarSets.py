@@ -43,7 +43,7 @@ def constructSimilarSets(imgList):
 
         simSetIndeces = []
 
-        for j in range(i+1, i+10):
+        for j in range(i+1, len(imgList)):
             if j > len(imgList)-1:
                 break
 
