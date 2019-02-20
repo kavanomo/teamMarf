@@ -1,33 +1,50 @@
 #include <Wire.h>
 
-#define SLAVE_ADDRESS 0x08
-
-char msg[50];
+#define SLAVE_ADDRESS 0x04
+int number = 0;
+int state = 0;
 
 void setup() {
-  Serial.begin(9600);
-  Wire.begin(SLAVE_ADDRESS);
-  Wire.onReceive(receiveData);
-  Wire.onRequest(sendData);
+pinMode(13, OUTPUT);
+Serial.begin(9600); // start serial for output
+// initialize i2c as slave
+Wire.begin(SLAVE_ADDRESS);
 
+// define callbacks for i2c communication
+Wire.onReceive(receiveData);
+Wire.onRequest(sendData);
+
+Serial.println("Ready!");
 }
 
 void loop() {
-  delay(100);
+delay(100);
 }
 
-void receiveData(int byteCount) {
-  int i = 0;
-  while (Wire.available())
+// callback for received data
+void receiveData(int byteCount){
+
+  number = Wire.read();
+  Serial.println("data received: ");
+  Serial.println(number);
+  
+  if (number == 1)
   {
-    msg[i] = Wire.read();
-    i ++;
+  
+    if (state == 0)
+    {
+      digitalWrite(13, HIGH); // set the LED on
+      state = 1;
+    }
+    else
+    {
+      digitalWrite(13, LOW); // set the LED off
+      state = 0;
+    }
   }
-  msg[i] = '\0';
-  Serial.print(msg);
-  Serial.print(i);
 }
 
-void sendData() {
-  Wire.write("ARDU");
+// callback for sending data
+void sendData(){
+Wire.write(number);
 }

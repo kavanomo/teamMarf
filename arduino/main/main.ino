@@ -1,7 +1,7 @@
 #include <Wire.h>
 
 // definitions
-#define SLAVE_ADDRESS 0x08
+#define SLAVE_ADDRESS 0x04
 
 // message definitions
 #define LEFT 0
