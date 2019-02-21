@@ -6,6 +6,7 @@ import tensorflow as tf
 from tensorflow import keras
 import numpy as np
 import matplotlib.pyplot as plt
+import createTrainingData
 
 
 def plot_image(i, predictions_array, true_label, img):
@@ -43,15 +44,19 @@ def plot_value_array(i, predictions_array, true_label):
 
 fashion_mnist = keras.datasets.fashion_mnist
 
-(train_images, train_labels), (test_images, test_labels) = fashion_mnist.load_data()
+(train_images, train_labels, class_names) = createTrainingData.returnTrainingData()
+(test_images, test_labels) = createTrainingData.returnTestingData(class_names)
 
-class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+# (train_images2, train_labels2), (test_images2, test_labels2) = fashion_mnist.load_data()
+# class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker',
+# 'Bag', 'Ankle boot']
 
 
 model = keras.Sequential([
     keras.layers.Flatten(input_shape=(28, 28)),
-    keras.layers.Dense(128, activation=tf.nn.relu),
-    keras.layers.Dense(10, activation=tf.nn.softmax)
+    keras.layers.Dense(256, activation=tf.nn.relu),
+    keras.layers.Dense(256, activation=tf.nn.relu),
+    keras.layers.Dense(len(train_labels), activation=tf.nn.softmax)
 ])
 
 model.compile(optimizer='adam',

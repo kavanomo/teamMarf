@@ -2,9 +2,7 @@ from PIL import Image, ImageOps
 import json
 import random
 import os
-import requests
 import cv2
-from io import BytesIO
 import numpy as np
 import urllib.request as url
 import time
@@ -74,21 +72,22 @@ def readInSetList():
 
 
 def returnTrainingData():
-    setImagePaths = json.load(open('SimilarSets.json', encoding="utf8"))
     pathName = './trainingData/'
-    imgList = []
-    imgLabels = []
     classNames = []
     iterPaths = [[x[0], x[2]] for x in os.walk(pathName)][1:]
+    imgList = []
+    imgLabels = []
     for i, (path, cardList) in enumerate(iterPaths):
         setName = path[len(pathName):]
         classNames.append(setName)
         for imgPath in cardList:
             img = cv2.imread(os.path.join(path, imgPath))
-            imgList.append(img)
+            imgList.append(img[:,:,0])
             imgLabels.append(i)
 
-    return (imgList, imgLabels, classNames)
+    imgList = np.asarray(imgList)
+    imgLabels = np.asarray(imgLabels)
+    return imgList, imgLabels, classNames
 
 
 def findParentSet(setName):
@@ -129,13 +128,24 @@ def createTestingData():
     json.dump(testData, f)
 
 
-def returnTestingData():
-    
+def returnTestingData(classNames, numChoices=5000):
+    testData = json.load(open('test.json', encoding='utf8'))
+    randomChoices = random.choices(testData, k=numChoices)
+    imgLocs, setName = zip(*randomChoices)
+    testImgLabels = [0]*numChoices
+    testImages = []
+    for i, set in enumerate(setName):
+        testImgLabels[i] = classNames.index(set)
+    for img in imgLocs:
+        testImages.append(cv2.imread(img+'.png')[:,:,0])
+    testImages = np.asarray(testImages)
+    testImgLabels = np.asarray(testImgLabels)
+    return testImages, testImgLabels
 
 
 
 if __name__ == '__main__':
-    createTestingData()
-
+    imgList, imgLabels, className = returnTrainingData()
+    returnTestingData(className)
     # setList = readInSetList()
     # createTrainingData(setList)
