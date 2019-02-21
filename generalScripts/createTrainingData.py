@@ -3,20 +3,20 @@ import json
 import random
 import os
 import numpy as np
-
+import cv2
 
 def getSmallerSize(img):
-    size = 27
-    width, height = img.size
-    if width > height:
-        scaleFactor = size/height
-        width = int(width*scaleFactor)
-        return width, size
-    else:
-        scaleFactor = size/width
-        height = int(height*scaleFactor)
-        return size, height
-
+    size = 28
+    return size, size
+    # width, height = img.size
+    # if width > height:
+    #     scaleFactor = size/height
+    #     width = int(width*scaleFactor)
+    #     return width, size
+    # else:
+    #     scaleFactor = size/width
+    #     height = int(height*scaleFactor)
+    #     return size, height
 
 
 def saltPepperNoise(img):
@@ -34,7 +34,6 @@ def saltPepperNoise(img):
                 noiseImg.putpixel((pixH, pixW), (255, 255, 255))
 
     return noiseImg
-
 
 
 def createTrainingData(setList):
@@ -67,6 +66,34 @@ def readInSetList():
     return json.load(open('SimilarSets.json', encoding="utf8"))
 
 
+def returnTrainingData():
+    setImagePaths = json.load(open('SimilarSets.json', encoding="utf8"))
+    pathName = './trainingData/'
+    imgList = []
+    imgLabels = []
+    classNames = []
+    iterPaths = [[x[0], x[2]] for x in os.walk(pathName)][1:]
+    for i, (path, cardList) in enumerate(iterPaths):
+        setName = path[len(pathName):]
+        classNames.append(setName)
+        for imgPath in cardList:
+            img = cv2.imread(os.path.join(path, imgPath))
+            imgList.append(img)
+            imgLabels.append(i)
+
+    return (imgList, imgLabels, classNames)
+
+
+def returnTestingData():
+    scryfallCardList = json.load(open('scryfall-default-cards.json', encoding='utf8'))
+    for card in scryfallCardList:
+        imageUrl = card['image_uris']['normal']
+
+
+
+
 if __name__ == '__main__':
-    setList = readInSetList()
-    createTrainingData(setList)
+    returnTrainingData()
+
+    # setList = readInSetList()
+    # createTrainingData(setList)
