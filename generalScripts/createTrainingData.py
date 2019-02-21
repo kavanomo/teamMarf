@@ -2,8 +2,15 @@ from PIL import Image, ImageOps
 import json
 import random
 import os
-import numpy as np
+import requests
 import cv2
+from io import BytesIO
+import numpy as np
+import urllib.request as url
+import time
+
+similarSets = json.load(open('SimilarSets.json', encoding='utf8'))
+
 
 def getSmallerSize(img):
     size = 28
@@ -84,16 +91,48 @@ def returnTrainingData():
     return (imgList, imgLabels, classNames)
 
 
-def returnTestingData():
+def findParentSet(setName):
+    for set in similarSets:
+        if setName in set['equivalents']:
+            return set['name']
+
+
+def createTestingData():
     scryfallCardList = json.load(open('scryfall-default-cards.json', encoding='utf8'))
+    testLoc = 'testingData'
+    os.makedirs(testLoc)
+    testData = []
     for card in scryfallCardList:
-        imageUrl = card['image_uris']['normal']
+        if 'image_uris' in card:
+            imageUrl = card['image_uris']['large']
+
+            try:
+                imgResponse = url.urlopen(imageUrl)
+                imgNpArray = np.array(bytearray(imgResponse.read()), dtype=np.uint8)
+                img = cv2.imdecode(imgNpArray, -1)[530:630, 520:630]
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                ret, img_bw = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+                cardIdentifier = card['id']
+                set = card['set_name'].replace(' ','_').replace(':','_').replace('/','')
+
+                parentSet = findParentSet(set)
+                imgLoc = os.path.join(testLoc, cardIdentifier)
+                testData.append([imgLoc, parentSet])
+                cv2.imwrite(imgLoc + '.png', img_bw)
+            except:
+                print('Failed:\n' + imageUrl)
+
+            time.sleep(.1)
+
+
+    f = open('TestDataList.json', 'w')
+    json.dump(testData, f)
 
 
 
 
 if __name__ == '__main__':
-    returnTrainingData()
+    createTestingData()
 
     # setList = readInSetList()
     # createTrainingData(setList)
