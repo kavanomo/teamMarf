@@ -95,6 +95,7 @@ def findParentSet(setName):
     for set in similarSets:
         if setName in set['equivalents']:
             return set['name']
+    return setName
 
 
 def createTestingData():
@@ -124,10 +125,12 @@ def createTestingData():
 
             time.sleep(.1)
 
-
     f = open('TestDataList.json', 'w')
     json.dump(testData, f)
 
+
+def returnTestingData():
+    
 
 
 
