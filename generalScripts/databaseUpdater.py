@@ -265,7 +265,7 @@ if __name__ == "__main__":
 
     if processType == processOptions[3]:
         try:
-            numSorts = args[2]
+            numSorts = int(args[2])
         except IndexError:
             numSorts = 5
 
