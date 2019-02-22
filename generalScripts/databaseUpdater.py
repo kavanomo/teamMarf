@@ -190,13 +190,13 @@ def getPricingData():
     #print(response.text)
 
 
-def createPlaceholderSorts(numSorts=5):
+def createPlaceholderSorts(numSorts, sortInput):
 
     for sort in range(numSorts):
         currentTime = datetime.datetime.now()
         sortOptions = ['col', 'cat', 'val']
         numCats = randint(1, 5)
-        sortChoice = sys.argv[3] or sortOptions[randint(0, len(sortOptions)-1)]
+        sortChoice = sortInput or sortOptions[randint(0, len(sortOptions)-1)]
         sortJSON = {'categories': {}}
 
         if sortChoice == sortOptions[0]:
@@ -223,12 +223,16 @@ def createPlaceholderSorts(numSorts=5):
         query = "INSERT INTO sortCommands (timestamp, sortType, numCat, categories) VALUES (%s, %s, %s, %s)"
         mycursor.execute(query, sortObject)
         teamMarfDB.commit()
-        time.sleep(.5)
+        time.sleep(1)
 
 if __name__ == "__main__":
     args = sys.argv
     processOptions = ['populate-cards', 'populate-sets', 'update', 'create-sorts']
-    processType = sys.argv[1] or processOptions[4]
+    try:
+        processType = args[1]
+    except IndexError:
+        processType = processOptions[3]
+
     mycursor = teamMarfDB.cursor()
 
     tokenExpiryDate = dateutil.parser.parse(tcgApiSecrets['expires'])
@@ -260,4 +264,14 @@ if __name__ == "__main__":
         getPricingData()
 
     if processType == processOptions[3]:
-        createPlaceholderSorts(int(sys.argv[2]))
+        try:
+            numSorts = args[2]
+        except IndexError:
+            numSorts = 5
+
+        try:
+            sortInput = args[3]
+        except IndexError:
+            sortInput = None
+
+        createPlaceholderSorts(numSorts, sortInput)
