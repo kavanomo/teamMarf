@@ -8,24 +8,33 @@ import urllib.request as url
 import time
 
 similarSets = json.load(open('SimilarSets.json', encoding='utf8'))
+imgSize = 35
+
+def pasteOnBackGround(img):
+    background = Image.new('RGB', (90,90))
+    imgDims = img.size
+    x = random.randint(0, 90-imgDims[0])
+    y = random.randint(0, 90-imgDims[1])
+    background.paste(img, (x,y))
+    return background
 
 
 def getSmallerSize(img):
-    size = 28
-    return size, size
-    # width, height = img.size
-    # if width > height:
-    #     scaleFactor = size/height
-    #     width = int(width*scaleFactor)
-    #     return width, size
-    # else:
-    #     scaleFactor = size/width
-    #     height = int(height*scaleFactor)
-    #     return size, height
+    size = imgSize
+    # return size, size
+    width, height = img.size
+    if width > height:
+        scaleFactor = size/height
+        width = int(width*scaleFactor)
+        return width, size
+    else:
+        scaleFactor = size/width
+        height = int(height*scaleFactor)
+        return size, height
 
 
 def saltPepperNoise(img):
-    prob = .08
+    prob = .1
     noiseImg = img.copy()
     (height, width) = noiseImg.size
     for pixH in range(height):
@@ -53,18 +62,25 @@ def createTrainingData(setList):
 
         for i in range(0,4):
             angle = i*90
+            angStr = '_' + str(angle)
             rotImage = image.rotate(angle,expand=True, resample=Image.BILINEAR)
             invertImage = ImageOps.invert(rotImage)
             rotImage = rotImage.resize((width, height), Image.ANTIALIAS)
             invertImage = invertImage.resize((width, height), Image.ANTIALIAS)
+            # noiseRotImage = saltPepperNoise(rotImage)
+            # noiseInvImage = saltPepperNoise(invertImage)
 
-            noiseRotImage = saltPepperNoise(rotImage)
-            noiseInvImage = saltPepperNoise(invertImage)
+            for j in range(0,5):
+                jStr = '_' + str(j)
+                pastedRotImg = pasteOnBackGround(rotImage)
+                pastedInvImg = pasteOnBackGround(invertImage)
 
-            rotImage.save(baseName + '_' + str(angle) + '.png')
-            invertImage.save(baseName + '_inv_' + str(angle) + '.png')
-            noiseRotImage.save(baseName + '_' + str(angle) + '_noise_' + '.png')
-            noiseInvImage.save(baseName + '_inv_' + str(angle) + '_noise_' +'.png')
+                pastedNoiseRotImg = saltPepperNoise(pastedRotImg)
+                pastedNoiseInvImg = saltPepperNoise(pastedInvImg)
+                pastedRotImg.save(baseName + angStr + jStr + '.png')
+                pastedInvImg.save(baseName + '_inv' + angStr + jStr +'.png')
+                pastedNoiseRotImg.save(baseName + angStr + '_noise' + jStr + '.png')
+                pastedNoiseInvImg.save(baseName + '_inv' + angStr + '_noise' + jStr + '.png')
 
 
 def readInSetList():
@@ -109,7 +125,7 @@ def createTestingData():
             try:
                 imgResponse = url.urlopen(imageUrl)
                 imgNpArray = np.array(bytearray(imgResponse.read()), dtype=np.uint8)
-                img = cv2.imdecode(imgNpArray, -1)[530:630, 520:630]
+                img = cv2.imdecode(imgNpArray, -1)[530:620, 540:630]
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                 ret, img_bw = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
                 cardIdentifier = card['id']
@@ -146,6 +162,6 @@ def returnTestingData(classNames, numChoices=5000):
 
 if __name__ == '__main__':
     imgList, imgLabels, className = returnTrainingData()
-    returnTestingData(className)
+    # returnTestingData(className)
     # setList = readInSetList()
     # createTrainingData(setList)

@@ -42,7 +42,7 @@ def plot_value_array(i, predictions_array, true_label):
     thisplot[true_label].set_color('blue')
 
 
-fashion_mnist = keras.datasets.fashion_mnist
+# fashion_mnist = keras.datasets.fashion_mnist
 
 (train_images, train_labels, class_names) = createTrainingData.returnTrainingData()
 (test_images, test_labels) = createTrainingData.returnTestingData(class_names)
@@ -53,7 +53,7 @@ fashion_mnist = keras.datasets.fashion_mnist
 
 
 model = keras.Sequential([
-    keras.layers.Flatten(input_shape=(28, 28)),
+    keras.layers.Flatten(input_shape=(90, 90)),
     keras.layers.Dense(256, activation=tf.nn.relu),
     keras.layers.Dense(256, activation=tf.nn.relu),
     keras.layers.Dense(len(train_labels), activation=tf.nn.softmax)
