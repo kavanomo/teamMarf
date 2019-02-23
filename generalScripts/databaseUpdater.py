@@ -1,7 +1,8 @@
 # Robbie Lowles
 # This script is designed to query an online API of M:TG cards and update a MySQL database with relevant info
 
-from random import randint, shuffle
+import random
+import numpy as np
 import json
 import mysql.connector
 import datetime
@@ -13,6 +14,8 @@ import sys
 import time
 
 utc = pytz.UTC
+
+rand = random.SystemRandom()
 
 secrets = json.load(open('../secrets.json', encoding="utf8"))
 
@@ -195,16 +198,18 @@ def createPlaceholderSorts(numSorts, sortInput):
     for sort in range(numSorts):
         currentTime = datetime.datetime.now()
         sortOptions = ['col', 'cat', 'val']
-        numCats = randint(1, 5)
-        sortChoice = sortInput or sortOptions[randint(0, len(sortOptions)-1)]
+        numCats = rand.randint(1, 5)
+        sortChoice = sortInput or sortOptions[rand.randint(0, len(sortOptions)-1)]
         sortJSON = {'categories': {}}
 
         if sortChoice == sortOptions[0]:
             # We are doing colour sorting
-            colourOptions = list(colourKey.values())
-            shuffle(colourOptions)
+            colourObject = {'red': 0, 'green': 0, 'blue': 0, 'white': 0, 'black': 0}
             for cat in range(numCats):
-                sortJSON['categories']['cat'+str(cat)] = colourOptions.pop()
+                for col in range(rand.randint(0, 2)):
+                    colourObject[np.random.choice(list(colourObject.keys()))] = 1
+
+                sortJSON['categories']['cat'+str(cat)] = colourObject
 
         if sortChoice == sortOptions[1]:
             # We are doing cataloging
@@ -214,7 +219,7 @@ def createPlaceholderSorts(numSorts, sortInput):
         if sortChoice == sortOptions[2]:
             lowBoundPrice = 0
             for cat in range(numCats):
-                highBoundPrice = lowBoundPrice + randint(3, 20)
+                highBoundPrice = lowBoundPrice + rand.randint(3, 20)
                 price = {'val1': lowBoundPrice, 'val2': highBoundPrice}
                 sortJSON['categories']['cat'+str(cat)] = price
                 lowBoundPrice = highBoundPrice
