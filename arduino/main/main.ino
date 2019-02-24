@@ -6,10 +6,6 @@
 // message definitions
 #define LEFT 0
 #define RIGHT 1
-#define PICKUP 0
-#define VACUUM 1
-#define ROTATE 2
-#define INITIALIZE 3
 
 // COMPONENT DEFS
 // D1 - on/off, D2 - direction
