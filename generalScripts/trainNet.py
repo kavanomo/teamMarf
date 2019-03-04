@@ -46,6 +46,7 @@ def plot_value_array(i, predictions_array, true_label):
 
 (train_images, train_labels, class_names) = createTrainingData.returnTrainingData()
 (test_images, test_labels) = createTrainingData.returnTestingData(class_names)
+(train_images, train_labels) = createTrainingData.returnTestingData(class_names, 35000)
 
 # (train_images2, train_labels2), (test_images2, test_labels2) = fashion_mnist.load_data()
 # class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker',
@@ -63,7 +64,7 @@ model.compile(optimizer='adam',
               loss='sparse_categorical_crossentropy',
               metrics=['accuracy'])
 
-model.fit(train_images, train_labels, epochs=20)
+model.fit(train_images, train_labels, epochs=75)
 
 test_loss, test_acc = model.evaluate(test_images, test_labels)
 
