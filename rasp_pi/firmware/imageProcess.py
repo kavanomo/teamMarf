@@ -4,10 +4,39 @@ import pytesseract
 import argparse
 import cv2
 import os
+#from time import sleep
 
 camera = PiCamera()
-path = '/home/pi/firmware/imageRec/image.png'
+path = '/home/pi/firmware/imageRec/image.jpg'
 
+'''
+Takes a picture and saves it in the specified "path" (global variable)
+Commented out parts allow you to view the image on a display, then take
+the picture by pressing a key.
+
+PARAMETERS
+none
+
+RETURNS
+none
+'''
+def takePicture():
+	#camera.start_preview()
+	#input()
+	camera.capture(path)
+	#camera.stop_preview()
+	#sleep(2)
+
+
+'''
+Processes the image taken and uses PyTesseract to extract the card name
+
+PARAMETERS
+none
+
+RETURNS
+The text extracted from the card (the name)
+'''
 def textRecognition():
 	# load the example image and convert it to grayscale
 	image = cv2.imread(path)
