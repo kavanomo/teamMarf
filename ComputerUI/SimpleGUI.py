@@ -124,19 +124,22 @@ if __name__ == '__main__':
     while True:
         button, values = startWindow.Read()
 
-        if button == sortOptions[0]:
+        if not values[0]:
+            sg.Popup('Please enter a username.')
+
+        if button == sortOptions[0] and values[0]:
             numCategories = getNumCategories('Colour')
             colourSelections = getColourSortOptions(numCategories)
             assembleMessage(button, colourSelections, values[0])
             sg.Popup('Sort received!')
 
-        if button == sortOptions[1]:
+        if button == sortOptions[1] and values[0]:
             numCategories = getNumCategories('Value')
             sortBounds = getValueSorts(numCategories)
             assembleMessage(button, sortBounds, values[0])
             sg.Popup('Sort received!')
 
-        if button == sortOptions[2]:
+        if button == sortOptions[2] and values[0]:
             assembleMessage(button, 'catalogue', values[0])
             sg.Popup('Sort received!')
 
