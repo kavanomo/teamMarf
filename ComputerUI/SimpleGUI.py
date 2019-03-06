@@ -80,6 +80,7 @@ def getColourSortOptions(numCategories):
 
     colourWindow = sg.Window('Cardobot').Layout(colSelectLayout)
     button, values = colourWindow.Read()
+    colourWindow.Close()
     return [values[i:i+5] for i in range(0, len(values), 5)]
 
 
@@ -105,6 +106,7 @@ def getValueSorts(numCategories):
         if event == 'Submit':
             break
 
+    valueWindow.Close()
     return list(values.values())
 
 
@@ -119,19 +121,22 @@ if __name__ == '__main__':
 
     startWindow = sg.Window('Cardobot').Layout(introLayout)
 
-    button, values = startWindow.Read()
+    while True:
+        button, values = startWindow.Read()
 
-    if button == sortOptions[0]:
-        numCategories = getNumCategories('Colour')
-        colourSelections = getColourSortOptions(numCategories)
-        assembleMessage(button, colourSelections, values[0])
+        if button == sortOptions[0]:
+            numCategories = getNumCategories('Colour')
+            colourSelections = getColourSortOptions(numCategories)
+            assembleMessage(button, colourSelections, values[0])
+            sg.Popup('Sort received!')
 
+        if button == sortOptions[1]:
+            numCategories = getNumCategories('Value')
+            sortBounds = getValueSorts(numCategories)
+            assembleMessage(button, sortBounds, values[0])
+            sg.Popup('Sort received!')
 
-    if button == sortOptions[1]:
-        numCategories = getNumCategories('Value')
-        sortBounds = getValueSorts(numCategories)
-        assembleMessage(button, sortBounds, values[0])
-
-    if button == sortOptions[2]:
-        assembleMessage(button, 'catalogue', values[0])
+        if button == sortOptions[2]:
+            assembleMessage(button, 'catalogue', values[0])
+            sg.Popup('Sort received!')
 
