@@ -1,7 +1,63 @@
 import PySimpleGUI as sg
+import datetime
+import json
+import mysql.connector
+from generalScripts.databaseUpdater import pushSort
 
 colours = ['Black', 'Blue', 'Green', 'Red', 'White']
+sortOptions = ['Colour Sort', 'Value Sort', 'Catalogue Sort']
+secrets = json.load(open('../secrets.json', encoding="utf8"))
 
+teamMarfDB = mysql.connector.connect(
+    host=secrets['host'],
+    port=secrets['port'],
+    user=secrets['user'],
+    password=secrets['password'],
+    db=secrets['db']
+)
+mycursor = teamMarfDB.cursor()
+
+
+def pushSort(sortObject):
+    query = "INSERT INTO sortCommands (timestamp, sortType, numCat, categories, userName) VALUES (%s, %s, %s, %s, %s)"
+    mycursor.execute(query, sortObject)
+    teamMarfDB.commit()
+    return
+
+
+def assembleMessage(sortType, sortParams, username='t_senlin'):
+    """
+
+    :param sortType:
+    :param sortParams: nxm list. n is num of categories, m is dependent on context of sort. Never more than 5
+    :return:
+    """
+    message = {'categories': {}}
+    currentTime = datetime.datetime.now()
+    numCat = len(sortParams)
+    if sortType == sortOptions[0]:
+        # Colour sort
+        sortType = 'col'
+        for j, sort in enumerate(sortParams):
+            category = 'cat'+str(j)
+            message['categories'][category] = {}
+            for i, colourChoice in enumerate(sort):
+                message['categories'][category][colours[i].lower()] = int(colourChoice)
+
+    if sortType == sortOptions[1]:
+        # Value sort
+        sortType = 'val'
+        for j, sort in enumerate(sortParams):
+            category = 'cat' + str(j)
+            val1 = sortParams[j-1] if (j >= 1) else 0
+            val2 = sort
+            message['categories'][category] = {'val1': val1, 'val2': val2}
+
+    if sortType == sortOptions[2]:
+        sortType = 'cat'
+        message['categories'] = sortParams
+
+    pushSort((currentTime, sortType, numCat, json.dumps(message), username))
 
 def getNumCategories(sortName):
     categoryLayout = [[sg.Text('Number of ' + sortName + 'Categories', justification='center', size=(30, 1))],
@@ -28,7 +84,6 @@ def getColourSortOptions(numCategories):
 
 
 def getValueSorts(numCategories):
-    print('foo')
     valueLayout = [[sg.Text('Choose the cost categories')]]
 
     for i in range(numCategories):
@@ -42,7 +97,7 @@ def getValueSorts(numCategories):
         event, values = valueWindow.Read()
         sortBounds = list(values.values())
         for j in range(numCategories-1):
-            if sortBounds[j]>sortBounds[j+1]:
+            if sortBounds[j] > sortBounds[j+1]:
                 sortBounds[j+1] = sortBounds[j]
         for k in range(numCategories):
             valueWindow.FindElement('cat'+str(k)).Update(sortBounds[k])
@@ -50,31 +105,33 @@ def getValueSorts(numCategories):
         if event == 'Submit':
             break
 
-    return values
-
+    return list(values.values())
 
 
 if __name__ == '__main__':
-    # Start with choice between colour, catalogue, or
-    sortOptions = ['Colour Sort', 'Value Sort', 'Catalogue Sort']
-    introLayout = [[sg.Text('Welcome to Cardobot!', justification='center', size=(30, 1))],
+    # Start with choice between colour, catalogue, or value
+    introLayout = [[sg.Text('Welcome to Cardobot!', justification='center', size=(22, 1), font='Helvetica 15')],
+                   [sg.Text('Username:'), sg.InputText(size=(24,3))],
                    [sg.Button(button_text=sortOptions[0], size=(30, 3))],
                    [sg.Button(button_text=sortOptions[1], size=(30, 3))],
                    [sg.Button(button_text=sortOptions[2], size=(30, 3))],
-                   [sg.Quit(button_text='Yeet on out of here', size=(30, 3))]]
+                   [sg.Quit(button_text='Quit', size=(30, 3))]]
 
     startWindow = sg.Window('Cardobot').Layout(introLayout)
 
     button, values = startWindow.Read()
 
     if button == sortOptions[0]:
-        print('Looks like you are trying to do colour sort. Want some help with that?')
         numCategories = getNumCategories('Colour')
         colourSelections = getColourSortOptions(numCategories)
+        assembleMessage(button, colourSelections, values[0])
+
 
     if button == sortOptions[1]:
         numCategories = getNumCategories('Value')
         sortBounds = getValueSorts(numCategories)
-        print(sortBounds)
+        assembleMessage(button, sortBounds, values[0])
 
+    if button == sortOptions[2]:
+        assembleMessage(button, 'catalogue', values[0])
 
