@@ -1,5 +1,6 @@
 import serverComms
 #import i2cComms
+import imageProcess
 import time
 #import RPi.GPIO as GPIO
 
@@ -18,7 +19,7 @@ RETURNS
 The number of turns needed with direction, encoded into the appropriate number
 '''
 def calcNumTurns(posBefore, posNow):
-	diff = abs(postNow - postBefore)
+	diff = abs(posNow - posBefore)
 	special = False
 
 	#TODO: Think of a better algorithm for this....
@@ -27,7 +28,7 @@ def calcNumTurns(posBefore, posNow):
 	elif (diff == 4):
 		diff = 2
 		special = True
-	elif (dif == 5):
+	elif (diff == 5):
 		diff = 1
 		special = True
 
@@ -39,7 +40,7 @@ def calcNumTurns(posBefore, posNow):
 		if (posBefore >= 4):
 			diff = diff + 1
 	else:
-		if ((diff == 3) or (posNow > posBefore)):
+		if ((diff == 6) or (posNow > posBefore)):
 			diff = diff + 1
 
 	return diff
@@ -117,15 +118,35 @@ RETURNS
 none
 '''
 def pickUpCard():
-	return 0
+	# Swivelhead over
+
+	# Check if Uno is done setting the buckets
+	done = i2cComms.readNumber()
+	while (not done):
+		sleep(1)
+		done = i2cComms.readNumber()
+
+	# Send vacuuming command
+	i2cComms.writeNumber(8)
+
+	# Check if Uno has picked up card
+	done = i2cComms.readNumber()
+	while (not done):
+		sleep(1)
+		done = i2cComms.readNumber()
+
+	# Bring swivelhead back
+
+	# Tell Uno to drop the card
+	i2cComms.writeNumber(8)
 
 
 # Initialization 
-'''i2cComms.writeNumber(0)
+'''
 GPIO.setmode(GPIO.BOARD)
 # The swivel head motor. 13 - D1 on/off. 15 - D2 direction
-GPIO.setup(13, GPIO.OUT)
-GPIO.setup(15, GPIO.OUT)
+GPIO.setup(13, GPIO.OUT, initial=GPIO.LOW)
+GPIO.setup(15, GPIO.OUT, initial=GPIO.LOW)
 # Limit switch setup. 36 - Tower. 38 - Bucket Tree.
 GPIO.setup(36, GPIO.IN)
 GPIO.setup(38, GPIO.IN)'''
@@ -134,93 +155,106 @@ GPIO.setup(38, GPIO.IN)'''
 collection = list()
 totalValue = 0
 
-cmd = serverComms.getCommand()
-while(len(cmd) == 0):
+while(1):
 	cmd = serverComms.getCommand()
-	print(cmd)
+	while(len(cmd) == 0):
+		cmd = serverComms.getCommand()
+		print(cmd)
 
-cmd = cmd[0]
+	cmd = cmd[0]
 
-# TODO: Grab the username from the command
-username = 'Test'
+	# Init the Uno
+	# i2cComms.writeNumber(0)
 
-# sortTypes can be "cat", "col", or "val"
-sortType = cmd['data']['sortType']
+	# TODO: Grab the username from the command, as well as initial array for 
+	# confidence comparison
+	username = 'Test'
+	classNames = ['Test', 'Test', 'Test']
 
-if (sortType != 'cat'):
-	cats = cmd['data']['categories']
-	categories = list()
-	for i in cats:
-		categories.append(cmd['data']['categories'][i])
-		print(categories)
+	# sortTypes can be "cat", "col", or "val"
+	sortType = cmd['data']['sortType']
 
-# THIS IS WHEN LOOPING SHOULD HAPPEN TO TAKE PICS
+	if (sortType != 'cat'):
+		cats = cmd['data']['categories']
+		categories = list()
+		for i in cats:
+			categories.append(cmd['data']['categories'][i])
+			print(categories)
 
-# TAKE PICTURE AND GET THE NAME
-# PLACEHOLDER HARDCODED VALUES		
-sortType = 'val'
-col = {'blue': 0, 'green': 0, 'red': 0, 'white': 0, 'black': 0}
-cardName = 'Arcbound Ravager'
-# PLACEHOLDER HARDCODED VALUES	
+	imageProcess.takePicture()
+	imageProcess.preProcessImage()
+	cardName = imageProcess.textRecognition()
 
-if (sortType == 'col'):
-	cardInfo = serverComms.getCardInfo(True, cardName)
-	colour = cardInfo['cardInfo']['colour']
+	while(cardName != 'END'):
+		imageProcess.takePicture()
+		cardName = imageProcess.textRecognition()
+		################ PLACEHOLDER HARDCODED VALUES ################	
+		sortType = 'val'
+		col = {'blue': 0, 'green': 0, 'red': 0, 'white': 0, 'black': 0}
+		cardName = 'Arcbound Ravager'
+		################ PLACEHOLDER HARDCODED VALUES ################	
 
-	# Move the bucket tree to the correct position
-	numTurns = findBucket(colour, sortType, categories)
-	# 16 = B10000
-	msg = 16 + numTurns
-	#i2cComms.writeNumber(msg)
-	pickUpCard()
+		if (sortType == 'col'):
+			cardInfo = serverComms.getCardInfo(True, cardName)
+			colour = cardInfo['cardInfo']['colour']
 
-elif (sortType == 'val'):
-	cardInfo = serverComms.getCardInfo(False, cardName)
-	# TODO: We need to do some more processing here to figure out the actual set and foiled
-	foiled = True # replace with function
-	possibleSets = cardInfo['sets']
-	cardSet = 'Darksteel' # replace with function, give in the sets as a parameter
-	if (foiled):
-		value = cardInfo['sets'][cardSet]['foilPrice']
-		print(value)
-	else:
-		value = cardInfo['sets'][cardSet]['cardPriceUSD']
-		print(value)
+			# Move the bucket tree to the correct position
+			numTurns = findBucket(colour, sortType, categories)
+			# 16 = B10000
+			msg = 16 + numTurns
+			#i2cComms.writeNumber(msg)
+			pickUpCard()
 
-	# Move the bucket tree to the correct position
-	numTurns = findBucket(value, sortType, categories)
-	# 16 = B10000
-	msg = 16 + numTurns
-	#i2cComms.writeNumber(msg)
-	pickUpCard()
+		elif (sortType == 'val'):
+			cardInfo = serverComms.getCardInfo(False, cardName)
+			# TODO: We need to do some more processing here to figure out the actual set and foiled
+			foiled = True # replace with function
+			possibleSets = cardInfo['sets']
+			cardSet = 'Darksteel' # PLACEHOLDER VALUE
+			#cardSet = imageProcess.setRecognition(classNames, possibleSets)
+			if (foiled):
+				value = cardInfo['sets'][cardSet]['foilPrice']
+				print(value)
+			else:
+				value = cardInfo['sets'][cardSet]['cardPriceUSD']
+				print(value)
 
-else:
-	cardInfo = serverComms.getCardInfo(False, cardName)
-	colour = cardInfo['cardInfo']['colour']
-	# TODO: We need to do some more processing here to figure out the actual set and foiled
-	foiled = True # replace with function
-	possibleSets = cardInfo['sets']
-	cardSet = 'Darksteel' # replace with function, give in the sets as a parameter
-	if (foiled):
-		value = cardInfo['sets'][cardSet]['foilPrice']
-		print(value)
-	else:
-		value = cardInfo['sets'][cardSet]['cardPriceUSD']
-		print(value)
+			# Move the bucket tree to the correct position
+			numTurns = findBucket(value, sortType, categories)
+			# 16 = B10000
+			msg = 16 + numTurns
+			#i2cComms.writeNumber(msg)
+			# pickUpCard()
 
-	entry = {
-		"name": cardName,
-		"colour": colour,
-		"price": value,
-		"foiled": foiled
-	}
-	collection.append(entry)
-	totalValue = totalValue + value 
+		else:
+			cardInfo = serverComms.getCardInfo(False, cardName)
+			colour = cardInfo['cardInfo']['colour']
+			# TODO: We need to do some more processing here to figure out the actual set and foiled
+			foiled = True # replace with function
+			possibleSets = cardInfo['sets']
+			cardSet = 'Darksteel' # replace with function, give in the sets as a parameter
+			if (foiled):
+				value = cardInfo['sets'][cardSet]['foilPrice']
+				print(value)
+			else:
+				value = cardInfo['sets'][cardSet]['cardPriceUSD']
+				print(value)
 
-	# Move the bucket tree to the correct position
-	numTurns = findBucket(0, sortType, categories)
-	# 16 = B10000
-	msg = 16 + numTurns
-	#i2cComms.writeNumber(msg)
-	pickUpCard()
+			entry = {
+				"name": cardName,
+				"colour": colour,
+				"price": value,
+				"foiled": foiled
+			}
+			collection.append(entry)
+			totalValue = totalValue + value 
+
+			# Move the bucket tree to the correct position. This also includes the correct direction
+			numTurns = findBucket(0, sortType, categories)
+			# 16 = B10000
+			msg = 16 + numTurns
+			#i2cComms.writeNumber(msg)
+			# pickUpCard()
+	#Deinit the Uno
+	#i2cComms.writeNumber(24)
 

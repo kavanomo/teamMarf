@@ -4,7 +4,7 @@ import pytesseract
 import argparse
 import cv2
 import os
-#from time import sleep
+# from time import sleep
 
 camera = PiCamera()
 path = '/home/pi/firmware/imageRec/image.jpg'
@@ -27,6 +27,34 @@ def takePicture():
 	#camera.stop_preview()
 	#sleep(2)
 
+
+'''
+Function that compares values returned from set symbol recognition thing 
+with the confidenceArray and decides on the most likely set symbol 
+(probably put in the imageProcess file)
+
+PARAMETERS
+class_names: The list of sets that are mapped to the confidence array
+possibleSets: The list of possible sets
+
+RETURNS
+The most likely set that the card belongs to
+
+'''
+def setRecognition(classNames, possibleSets):
+	################ PLACEHOLDER HARDCODED VALUES ################
+	confidenceArray = [1.6707758e-06, 8.3274145e-08, 9.8423456e-08, 1.9251273e-07]
+	################ PLACEHOLDER HARDCODED VALUES ################
+	confidence = 0
+	likelySet = "None"
+
+	for i in possibleSets:
+		index = classNames.index(i)
+		if (confidenceArray[index] > confidence):
+			likelySet = i
+			confidence = confidenceArray[index]
+
+	return likelySet
 
 '''
 Processes the image taken and uses PyTesseract to extract the card name

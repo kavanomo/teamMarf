@@ -1,7 +1,3 @@
-# This is placeholder code.
-# To be updated with our own data when I get to it.
-
-
 import tensorflow as tf
 from tensorflow import keras
 import numpy as np
@@ -52,12 +48,17 @@ def plot_value_array(i, predictions_array, true_label):
 # class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker',
 # 'Bag', 'Ankle boot']
 
+# old_model = keras.models.load_model('setIconModel.h5')
+
+# loss, acc = old_model.evaluate(test_images, test_labels)
 
 model = keras.Sequential([
-    keras.layers.Flatten(input_shape=(90, 90)),
-    keras.layers.Dense(256, activation=tf.nn.relu),
-    keras.layers.Dense(256, activation=tf.nn.relu),
-    keras.layers.Dense(len(train_labels), activation=tf.nn.softmax)
+    keras.layers.Flatten(input_shape=(60, 90)),
+    keras.layers.Dense(256, activation=tf.nn.relu, kernel_regularizer=keras.regularizers.l2(.003)),
+    keras.layers.Dropout(.125),
+    keras.layers.Dense(256, activation=tf.nn.relu, kernel_regularizer=keras.regularizers.l2(.003)),
+    keras.layers.Dropout(.125),
+    keras.layers.Dense(len(class_names), activation=tf.nn.softmax)
 ])
 
 model.compile(optimizer='adam',
@@ -69,7 +70,7 @@ model.fit(train_images, train_labels, epochs=75)
 test_loss, test_acc = model.evaluate(test_images, test_labels)
 
 print('Test accuracy:', test_acc)
-
+model.save('setIconModel2.h5')
 predictions = model.predict(test_images)
 
 num_rows = 5
