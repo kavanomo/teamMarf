@@ -42,7 +42,9 @@ def plot_value_array(i, predictions_array, true_label):
 
 (train_images, train_labels, class_names) = createTrainingData.returnTrainingData()
 (test_images, test_labels) = createTrainingData.returnTestingData(class_names)
-(train_images, train_labels) = createTrainingData.returnTestingData(class_names, 35000)
+(moreTraining, moreTrainingLabels) = createTrainingData.returnTestingData(class_names, 38000)
+train_images = np.concatenate((train_images, moreTraining))
+train_labels = np.concatenate((train_labels, moreTrainingLabels))
 
 # (train_images2, train_labels2), (test_images2, test_labels2) = fashion_mnist.load_data()
 # class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker',
@@ -53,11 +55,11 @@ def plot_value_array(i, predictions_array, true_label):
 # loss, acc = old_model.evaluate(test_images, test_labels)
 
 model = keras.Sequential([
-    keras.layers.Flatten(input_shape=(60, 90)),
+    keras.layers.Flatten(input_shape=(90, 90)),
     keras.layers.Dense(256, activation=tf.nn.relu, kernel_regularizer=keras.regularizers.l2(.003)),
-    keras.layers.Dropout(.125),
+    keras.layers.Dropout(.175),
     keras.layers.Dense(256, activation=tf.nn.relu, kernel_regularizer=keras.regularizers.l2(.003)),
-    keras.layers.Dropout(.125),
+    keras.layers.Dropout(.175),
     keras.layers.Dense(len(class_names), activation=tf.nn.softmax)
 ])
 
@@ -65,13 +67,14 @@ model.compile(optimizer='adam',
               loss='sparse_categorical_crossentropy',
               metrics=['accuracy'])
 
-model.fit(train_images, train_labels, epochs=75)
+model.fit(train_images, train_labels, epochs=50)
 
 test_loss, test_acc = model.evaluate(test_images, test_labels)
 
 print('Test accuracy:', test_acc)
-model.save('setIconModel2.h5')
 predictions = model.predict(test_images)
+
+model.save('setIconModel2.h5')
 
 num_rows = 5
 num_cols = 3
