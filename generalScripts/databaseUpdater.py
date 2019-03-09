@@ -193,6 +193,13 @@ def getPricingData():
     #print(response.text)
 
 
+def pushSort(sortObject):
+    query = "INSERT INTO sortCommands (timestamp, sortType, numCat, categories) VALUES (%s, %s, %s, %s)"
+    mycursor.execute(query, sortObject)
+    teamMarfDB.commit()
+    return
+
+
 def createPlaceholderSorts(numSorts, sortInput):
 
     for sort in range(numSorts):
@@ -225,9 +232,7 @@ def createPlaceholderSorts(numSorts, sortInput):
                 lowBoundPrice = highBoundPrice
 
         sortObject = (currentTime, sortChoice, numCats, json.dumps(sortJSON))
-        query = "INSERT INTO sortCommands (timestamp, sortType, numCat, categories) VALUES (%s, %s, %s, %s)"
-        mycursor.execute(query, sortObject)
-        teamMarfDB.commit()
+        pushSort(sortObject)
         time.sleep(1)
 
 if __name__ == "__main__":

@@ -93,7 +93,7 @@ model = keras.Sequential([
     keras.layers.Flatten(input_shape=(46, 54)),
     keras.layers.Dense(64, activation=tf.nn.relu, kernel_regularizer=keras.regularizers.l2(.003)),
     keras.layers.Dense(64, activation=tf.nn.relu, kernel_regularizer=keras.regularizers.l2(.003)),
-    keras.layers.Dense(len(trainLabels), activation=tf.nn.softmax)
+    keras.layers.Dense(len(classNames), activation=tf.nn.softmax)
 ])
 
 callbackCheck = tf.keras.callbacks.ModelCheckpoint(checkpointPath, save_weights_only=True, verbose=1)
