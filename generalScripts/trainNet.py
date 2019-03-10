@@ -3,6 +3,7 @@ from tensorflow import keras
 import numpy as np
 import matplotlib.pyplot as plt
 import createTrainingData
+import json
 
 
 def plot_image(i, predictions_array, true_label, img):
@@ -41,8 +42,8 @@ def plot_value_array(i, predictions_array, true_label):
 # fashion_mnist = keras.datasets.fashion_mnist
 
 (train_images, train_labels, class_names) = createTrainingData.returnTrainingData()
-(test_images, test_labels) = createTrainingData.returnTestingData(class_names)
-(train_images, train_labels) = createTrainingData.returnTestingData(class_names, 38000)
+(test_images, test_labels) = createTrainingData.returnTestingData(class_names, 3000)
+(train_images, train_labels) = createTrainingData.returnTestingData(class_names, 40000)
 # train_images = np.concatenate((train_images, moreTraining))
 # train_labels = np.concatenate((train_labels, moreTrainingLabels))
 
@@ -67,14 +68,13 @@ model.compile(optimizer='adam',
               loss='sparse_categorical_crossentropy',
               metrics=['accuracy'])
 
-model.fit(train_images, train_labels, epochs=50, batch_size=1024)
+model.fit(train_images, train_labels, epochs=65, batch_size=1024)
 
 test_loss, test_acc = model.evaluate(test_images, test_labels)
 
 print('Test accuracy:', test_acc)
 predictions = model.predict(test_images)
-
-model.save('setIconModel2.h5')
+model.save('setIconModel.h5')
 
 num_rows = 5
 num_cols = 3
