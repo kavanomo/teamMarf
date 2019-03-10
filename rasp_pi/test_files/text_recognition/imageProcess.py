@@ -12,9 +12,10 @@ import os
 
 # camera = PiCamera()
 path = 'image.jpg'
-foilModel = 'foilMode.h5'
-setIconModel = 'setIconModel.h5'
+foilModelh5 = 'foilModel.h5'
+setIconModelh5 = 'setIconModel.h5'
 east = 'frozen_east_text_detection.pb'
+test = 'test.jpg'
 
 '''
 Takes a picture and saves it in the specified "path" (global variable)
@@ -51,7 +52,7 @@ def preProcessImage():
 	image = cv2.imread(path)
 	rotated_img = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
 	out = rotated_img[550:1700, 20:1450]
-	cv2.imwrite(blah, out)
+	cv2.imwrite(path, out)
 
 '''
 Produces the prediction values based on the trained model. Detects whether
@@ -88,17 +89,22 @@ Whether or not the card is foiled
 def foilRecognition():
 	# Load model and image, extract HSV channel and send in the desired
 	# input shape
-	foilModel = keras.models.load_model(foilModel)
+	foilModel = keras.models.load_model(foilModelh5)
 	testImg = cv2.imread(path)
 	testImg = cv2.cvtColor(testImg, cv2.COLOR_RGB2HSV)[:,:,0] 
 	inputShape = foilModel.input_shape[1:]
 	resized = cv2.resize(testImg, inputShape[::-1])
 
-	predictions = recognizeObject(model, resized)
+	predictions = recognizeObject(foilModel, resized)
 
+	print(predictions)
+
+	'''
 	if (predictions[0] > predictions[1]):
 		return True
 	return False
+	'''
+	return True
 
 '''
 Compares values returned from set symbol recognition with the 
@@ -112,12 +118,39 @@ RETURNS
 The most likely set that the card belongs to
 
 '''
-def setRecognition(classNames, possibleSets):
-	setIconModel = keras.models.load_model('setIconModel.h5')
-	confidenceArray = recognizeObject(model, img)
+#def setRecognition(classNames, possibleSets):
+def setRecognition():
+	# We need to do some img processing first
+	image = cv2.imread(path)
+	image = image[940:1230, 1080:1310]
+
+	rgb_planes = cv2.split(image)
+
+	result_planes = []
+	for plane in rgb_planes:
+		dilated_img = cv2.dilate(plane, np.ones((7,7), np.uint8))
+		bg_img = cv2.medianBlur(dilated_img, 21)
+		diff_img = 255 - cv2.absdiff(plane, bg_img)
+		result_planes.append(diff_img)
+
+	result = cv2.merge(result_planes)
+
+	gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+	gray = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+
+	resized = cv2.resize(gray, (90, 90))
+	cv2.imwrite(test, resized)
+
+	setIconModel = keras.models.load_model(setIconModelh5)
+	
+	confidenceArray = recognizeObject(setIconModel, resized)
+	print(confidenceArray)
+	print(confidenceArray[0])
+	print(confidenceArray[0][19])
 	confidence = 0
 	likelySet = "None"
 
+	'''
 	for i in possibleSets:
 		index = classNames.index(i)
 		if (confidenceArray[index] > confidence):
@@ -125,7 +158,20 @@ def setRecognition(classNames, possibleSets):
 			confidence = confidenceArray[index]
 
 	return likelySet
+	'''
 
+'''
+Used for text_recognition. Processes the predictions scores that we got
+and returns their respective confidences
+
+PARAMETERS
+scores: Scores associated with the boxes
+geometry: Current coordinates
+
+RETURNS
+A tuple of the bounding boxes and their associated confidences
+
+'''
 def decode_predictions(scores, geometry):
 	# grab the number of rows and columns from the scores volume, then
 	# initialize our set of bounding box rectangles and corresponding
