@@ -88,7 +88,7 @@ def readInSetList():
 
 
 def returnTrainingData():
-    pathName = './trainingData/'
+    pathName = './setIconTraining/trainingData/'
     classNames = []
     iterPaths = [[x[0], x[2]] for x in os.walk(pathName)][1:]
     imgList = []
@@ -147,13 +147,17 @@ def createTestingData():
 def returnTestingData(classNames, numChoices=5000):
     testData = json.load(open('test.json', encoding='utf8'))
     randomChoices = random.choices(testData, k=numChoices)
-    imgLocs, setName = zip(*randomChoices)
-    testImgLabels = [0]*numChoices
+    testImgLabels = []
     testImages = []
-    for i, set in enumerate(setName):
-        testImgLabels[i] = classNames.index(set)
-    for img in imgLocs:
-        testImages.append(cv2.imread(img+'.png')[:,:,0])
+    for i, card in enumerate(randomChoices):
+        testImgLabels.append(classNames.index(card[1]))
+        try:
+            img = (cv2.imread(card[0]+'.png')[:,:,0])/255
+            testImages.append(img)
+        except:
+            testImgLabels.pop()
+            pass
+
     testImages = np.asarray(testImages)
     testImgLabels = np.asarray(testImgLabels)
     return testImages, testImgLabels

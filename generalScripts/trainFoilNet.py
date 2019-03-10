@@ -76,7 +76,7 @@ def createTrainingData():
 
 def createTestingData(trainImages, trainLabels):
     maxSize = len(trainLabels)
-    numTestImages = maxSize//5
+    numTestImages = maxSize//10
     randIndexes = sorted(sample(range(maxSize),numTestImages), reverse=True)
     testImages = np.take(trainImages, randIndexes)
     testLabels = np.take(trainLabels, randIndexes)
@@ -103,8 +103,8 @@ model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=
 model.fit(trainImages, trainLabels, epochs=50) #, callbacks=callbackCheck)
 
 testLoss, testAcc = model.evaluate(testImages, testLabels)
-model.save('foilMode.h5')
 predictions = model.predict(testImages)[:,:2]
+model.save('foilMode.h5')
 
 num_rows = 5
 num_cols = 3
@@ -116,3 +116,4 @@ for i in range(num_images):
   plt.subplot(num_rows, 2*num_cols, 2*i+2)
   plot_value_array(i, predictions, testLabels)
 plt.show()
+cv2.waitKey()
