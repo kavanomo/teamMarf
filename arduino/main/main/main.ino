@@ -11,19 +11,17 @@
 // D1 - on/off, D2 - direction
 #define BUCKETD1 8
 #define BUCKETD2 9
-#define TOWERD1 2
-#define TOWERD2 3
+#define TOWERD1 12
+#define TOWERD2 13
 #define VACUUMD1 4
 #define VACUUMD2 5
 #define SOLENOID 6
-#define TOWERLIMIT 7
+#define TOWERLIMIT 2
 
 #define TOWERPD A1
-#define VACUUMPD A0
 
 // photodiode thresholds
-#define TOWERPDTHRESH 3
-#define VACUUMPDTHRESH 3
+#define TOWERPDTHRESH 940
 
 // num of steps required to make a turn
 #define STEPS1 33
@@ -39,9 +37,23 @@ struct command {
 
 // GLOBAL DEFS
 byte msg;
-bool new_msg;
-bool sol_on;
-bool done;
+bool new_msg = false;
+bool sol_on = false;
+bool done = false;
+bool moveTower = false;
+
+void towerISR()
+{
+  moveTower = false;
+  digitalWrite(TOWERD2, LOW);
+  Serial.println("Bringing tower back down a little");
+  for (int i = 0; i < 20; i++) {
+    digitalWrite(TOWERD1, HIGH);
+    delay(10);
+    digitalWrite(TOWERD1, LOW);
+    delay(10);
+  }
+}
 
 void setup() {
   // i2c CONNECTION
@@ -64,19 +76,37 @@ void setup() {
 
   // LIMIT SWITCH INTERRUPT
   attachInterrupt(digitalPinToInterrupt(TOWERLIMIT), towerISR, RISING);
+  interrupts();
 }
 
 void initialize() {
   Serial.println("Ready!");
+  digitalWrite(VACUUMD1, 1);
+  // set solenoid to closed
+  int val = analogRead(TOWERPD);
+  digitalWrite(TOWERD2, HIGH);
+  while (val < TOWERPDTHRESH) {
+    digitalWrite(TOWERD1, HIGH);
+    delay(5);
+    digitalWrite(TOWERD1, LOW);
+    delay(5);
+    val = analogRead(TOWERPD);
+  }
+  sol_on = false;
+  new_msg = false;
 }
 
 void deinitialize() {
   Serial.println("Good bye!");
-}
-
-void towerISR()
-{
-  Serial.println("Tower ISR!");
+  // Bringing the tower back down
+  digitalWrite(TOWERD2, LOW);
+  // Magic number is 4500
+  for(int i = 0; i < 4500; i++){
+    digitalWrite(TOWERD1, HIGH);
+    delay(5);
+    digitalWrite(TOWERD1, LOW);
+    delay(5);
+  }
 }
 
 command parseMessage(byte msg) {
@@ -108,15 +138,33 @@ void loop() {
         Serial.println("Vacuuming!");
         sol_on = !sol_on;
         // move down by one so we don't interfere when the vacuum goes back
-        if (sol_on == false)
-        {
+        if (sol_on == false) {
           //TODO: Figure out which way is up and which is down, and also how much a step is
           Serial.println("Bringing tower down a little");
-        }
+          digitalWrite(TOWERD2, LOW);
+          for (int i = 0; i < 20; i++) {
+            digitalWrite(TOWERD1, HIGH);
+            delay(10);
+            digitalWrite(TOWERD1, LOW);
+            delay(10);
+          }
+         }
         // if vacuuming, bring up the scan tower a little until it gets picked up
         else
         {
-          Serial.println("Bringing tower up a little");
+          moveTower = true;
+          digitalWrite(TOWERD2, HIGH);
+          int val = 0;
+          val = analogRead(TOWERPD);
+          if (moveTower && (val < TOWERPDTHRESH)) {
+            Serial.println("Bringing tower up a little");
+            digitalWrite(TOWERD1, HIGH);
+            delay(15);
+            digitalWrite(TOWERD1, LOW);
+            delay(15);
+            val = analogRead(TOWERPD);
+          }
+          moveTower = false;
         }
         break;
       }
@@ -148,13 +196,13 @@ void loop() {
           numSteps = STEPS3;
         }
         
-        for (int i = 0; i < 1; i++)
+        for (int i = 0; i < numSteps; i++)
         {
           Serial.println("Step");
           digitalWrite(BUCKETD1, HIGH);
-          delay(15);
+          delay(40);
           digitalWrite(BUCKETD1, LOW);
-          delay(15); 
+          delay(40); 
         }
         break;
       }
@@ -162,7 +210,6 @@ void loop() {
       case 3:
       {
         deinitialize();
-        
         break;
       }
       default:

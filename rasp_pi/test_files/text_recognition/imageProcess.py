@@ -10,8 +10,8 @@ import os
 
 # from time import sleep
 
-# camera = PiCamera()
-path = 'image.jpg'
+#camera = PiCamera()
+path = 'images0.jpg'
 foilModelh5 = 'foilModel.h5'
 setIconModelh5 = 'setIconModel.h5'
 east = 'frozen_east_text_detection.pb'
@@ -31,9 +31,9 @@ none
 def takePicture():
 	#camera.start_preview()
 	#input()
-	#camera.resolution = (2592, 1944)
-	#camera.capture(path)
-	print("took a pic")
+	camera.resolution = (2592, 1944)
+	camera.capture(path)
+	#print("took a pic")
 	#camera.stop_preview()
 	#sleep(2)
 
@@ -51,7 +51,7 @@ none
 def preProcessImage():
 	image = cv2.imread(path)
 	rotated_img = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
-	out = rotated_img[550:1700, 20:1450]
+	out = rotated_img[500:1700, 20:1550]
 	cv2.imwrite(path, out)
 
 '''
@@ -90,21 +90,17 @@ def foilRecognition():
 	# Load model and image, extract HSV channel and send in the desired
 	# input shape
 	foilModel = keras.models.load_model(foilModelh5)
+
 	testImg = cv2.imread(path)
 	testImg = cv2.cvtColor(testImg, cv2.COLOR_RGB2HSV)[:,:,0] 
 	inputShape = foilModel.input_shape[1:]
 	resized = cv2.resize(testImg, inputShape[::-1])
-
-	predictions = recognizeObject(foilModel, resized)
+	predictions = recognizeObject(foilModel, resized/255)
 
 	print(predictions)
-
-	'''
-	if (predictions[0] > predictions[1]):
+	if (predictions[0][0] > predictions[0][1]):
 		return True
 	return False
-	'''
-	return True
 
 '''
 Compares values returned from set symbol recognition with the 
@@ -118,8 +114,7 @@ RETURNS
 The most likely set that the card belongs to
 
 '''
-#def setRecognition(classNames, possibleSets):
-def setRecognition():
+def setRecognition(classNames, possibleSets):
 	# We need to do some img processing first
 	image = cv2.imread(path)
 	image = image[940:1230, 1080:1310]
@@ -143,22 +138,18 @@ def setRecognition():
 
 	setIconModel = keras.models.load_model(setIconModelh5)
 	
-	confidenceArray = recognizeObject(setIconModel, resized)
-	print(confidenceArray)
-	print(confidenceArray[0])
-	print(confidenceArray[0][19])
+	confidenceArray = recognizeObject(setIconModel, resized/255)
 	confidence = 0
 	likelySet = "None"
 
-	'''
 	for i in possibleSets:
 		index = classNames.index(i)
-		if (confidenceArray[index] > confidence):
+		if (confidenceArray[0][index] > confidence):
 			likelySet = i
-			confidence = confidenceArray[index]
+			confidence = confidenceArray[0][index]
 
+	likelySet = likelySet.replace("_", " ")
 	return likelySet
-	'''
 
 '''
 Used for text_recognition. Processes the predictions scores that we got
@@ -320,6 +311,7 @@ def textRecognition():
 
 	roi = orig[startY:endY, startX:endX]
 	roi = cv2.blur(roi,(5,5))
+	cv2.imwrite(test, roi)
 
 	# in order to apply Tesseract v4 to OCR text we must supply
 	# (1) a language, (2) an OEM flag of 1, indicating that the we
@@ -340,6 +332,6 @@ def textRecognition():
 		text = text.replace("’", "'")
 		text = text.replace(".", ",")
 
-	os.remove("text.jpg")
+	#os.remove("text.jpg")
 
 	return text

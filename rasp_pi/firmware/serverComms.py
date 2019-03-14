@@ -2,6 +2,7 @@ import requests
 import json
 
 base_URL = 'http://127.0.0.1:5000'
+#base_URL = 'http://ec2-18-220-159-65.us-east-2.compute.amazonaws.com/'
 command = '/sortCommands'
 catalogue = '/postCollection'
 info = '/cardInfo'
@@ -36,4 +37,4 @@ def getCardInfo(sortCol, cardName):
 def sendCollection(collection):
 	url = base_URL + catalogue
 
-	r = requests.post(url, data=collection)
+	r = requests.post(url, json=collection)
