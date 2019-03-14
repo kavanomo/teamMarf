@@ -2,7 +2,6 @@ import PySimpleGUI as sg
 import datetime
 import json
 import mysql.connector
-from generalScripts.databaseUpdater import pushSort
 
 colours = ['Black', 'Blue', 'Green', 'Red', 'White']
 sortOptions = ['Colour Sort', 'Value Sort', 'Catalogue Sort']
@@ -70,6 +69,26 @@ def getNumCategories(sortName):
     return int(values[0])
 
 
+def noNullColourChoice(choices):
+    """
+    Find if user marked at least one colour choice as true in each sort category. If any choice doesn't have True in it,
+    then it means we have an empty category.
+    :param choices: 2d list in format [[Bool, Bool, Bool, Bool, Bool]*numCategories]
+    :return:
+    """
+    return all(True in sub for sub in choices)
+
+
+def noIdenticalChoices(choices):
+    """
+    Make sure that no choice of colours is repeated in any category. If any choice is repeated in the list of choices,
+    return a false
+    :param choices: 2d ordered list in format [[Bool, Bool, Bool, Bool, Bool]*numCategories]
+    :return:
+    """
+    return not(max([choices.count(choice)-1 for choice in choices]))
+
+
 def getColourSortOptions(numCategories):
     colSelectLayout = [[sg.Text('Select your sorting categories.', size=(30,1))]]
     for i in range(numCategories):
@@ -79,9 +98,25 @@ def getColourSortOptions(numCategories):
     colSelectLayout.append([sg.Submit(tooltip='Click to confirm this selection')])
 
     colourWindow = sg.Window('Cardobot').Layout(colSelectLayout)
-    button, values = colourWindow.Read()
+
+    while True:
+        button, values = colourWindow.Read()
+        values = [values[i:i+5] for i in range(0, len(values), 5)]
+        distinctChoices = noIdenticalChoices(values)
+        madeChoices = noNullColourChoice(values)
+        if madeChoices and distinctChoices:
+            break
+        elif not(distinctChoices) and not(madeChoices):
+            sg.Popup('Must select at least one colour for each category!\nEach category must be different!')
+        elif not(distinctChoices):
+            sg.Popup('Each category must be different!')
+        else:
+            sg.Popup('Must select at least one colour for each category!')
+
+
     colourWindow.Close()
-    return [values[i:i+5] for i in range(0, len(values), 5)]
+
+    return values
 
 
 def getValueSorts(numCategories):
@@ -136,10 +171,10 @@ if __name__ == '__main__':
         if button == sortOptions[1] and values[0]:
             numCategories = getNumCategories('Value')
             sortBounds = getValueSorts(numCategories)
-            assembleMessage(button, sortBounds, values[0])
+            # assembleMessage(button, sortBounds, values[0])
             sg.Popup('Sort received!')
 
         if button == sortOptions[2] and values[0]:
-            assembleMessage(button, 'catalogue', values[0])
+            # assembleMessage(button, 'catalogue', values[0])
             sg.Popup('Sort received!')
 
