@@ -56,7 +56,8 @@ def assembleMessage(sortType, sortParams, username='t_senlin'):
         sortType = 'cat'
         message['categories'] = sortParams
 
-    pushSort((currentTime, sortType, numCat, json.dumps(message), username))
+    # pushSort((currentTime, sortType, numCat, json.dumps(message), username))
+
 
 def getNumCategories(sortName):
     categoryLayout = [[sg.Text('Number of ' + sortName + 'Categories', justification='center', size=(30, 1))],
@@ -133,8 +134,8 @@ def getValueSorts(numCategories):
         event, values = valueWindow.Read()
         sortBounds = list(values.values())
         for j in range(numCategories-1):
-            if sortBounds[j] > sortBounds[j+1]:
-                sortBounds[j+1] = sortBounds[j]
+            if sortBounds[j] >= sortBounds[j+1]:
+                sortBounds[j+1] = sortBounds[j] + 1
         for k in range(numCategories):
             valueWindow.FindElement('cat'+str(k)).Update(sortBounds[k])
 
@@ -142,7 +143,9 @@ def getValueSorts(numCategories):
             break
 
     valueWindow.Close()
-    return list(values.values())
+    sortVals = list(values.values())
+    sortVals[-1] = 5000
+    return sortVals
 
 
 if __name__ == '__main__':
@@ -159,7 +162,12 @@ if __name__ == '__main__':
     while True:
         button, values = startWindow.Read()
 
-        if not values[0]:
+        if button == 'Quit':
+            result = sg.PopupYesNo('Are you sure you want to quit?',)
+            if result == 'Yes':
+                break
+
+        if not values[0] and button != 'Quit':
             sg.Popup('Please enter a username.')
 
         if button == sortOptions[0] and values[0]:
@@ -171,10 +179,10 @@ if __name__ == '__main__':
         if button == sortOptions[1] and values[0]:
             numCategories = getNumCategories('Value')
             sortBounds = getValueSorts(numCategories)
-            # assembleMessage(button, sortBounds, values[0])
+            assembleMessage(button, sortBounds, values[0])
             sg.Popup('Sort received!')
 
         if button == sortOptions[2] and values[0]:
-            # assembleMessage(button, 'catalogue', values[0])
+            assembleMessage(button, 'catalogue', values[0])
             sg.Popup('Sort received!')
 
