@@ -56,7 +56,7 @@ def assembleMessage(sortType, sortParams, username='t_senlin'):
         sortType = 'cat'
         message['categories'] = sortParams
 
-    # pushSort((currentTime, sortType, numCat, json.dumps(message), username))
+    pushSort((currentTime, sortType, numCat, json.dumps(message), username))
 
 
 def getNumCategories(sortName):
